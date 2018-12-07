@@ -13,8 +13,6 @@ from kyos import features
 from kyos import nn
 from kyos.__init__ import __version__
 
-# Ignore flake8 errors in this module
-# flake8: noqa
 
 def parse_arguments(system_args):
     """Parse command line arguments.
@@ -70,12 +68,16 @@ def parse_arguments(system_args):
     subparser.add_argument(dest="input_paths", type=str, metavar="INFILE", help="Input tabulated feature files.", nargs='+')
     subparser.set_defaults(func=merge_command)'''
 
+    description = """Generate tabular data containing places of mutations from a reference genome. Takes a BAM
+           file. Outputs the positions, number of forward and reverse ACTG, deletions, insertions and
+           reference skipped, and the qualities of the ACTG SNP's."""
+
     subparser = subparsers.add_parser("tabulate", formatter_class=formatter_class, description=description, help=description)
 
     subparser.add_argument(dest="input_file",       type=str,    help="Input sorted bam file.")
     subparser.add_argument(dest="output_file",      type=str,    help="Output tabular data file.")
     subparser.add_argument(dest="ref_file",         type=str,    help="Input reference file.")
-    subparser.add_argument("-t", "--truth", dest = "truth_file", type = str, help="SNP Mutator summary file containing truth allele.", default=None)
+    subparser.add_argument("-t", "--truth", dest="truth_file", type=str, help="SNP Mutator summary file containing truth allele.", default=None)
     subparser.add_argument("-f", "--tnfract", dest="tnfract", type=float, help="Fraction of True Negatives to write to the output file.", default=1.0)
     subparser.add_argument("-s", "--rseed", dest="rseed", type=int, help="Random seed to ensure reproducible results when using --tnfract.")
     subparser.add_argument("--force_truth", dest="force_truth", action='store_true', help="Put in mutations that have no coverage. Requires a summary file", default=False)
@@ -107,10 +109,6 @@ def parse_arguments(system_args):
     subparser.add_argument(dest="vcf_file_path", type=str, metavar="VCF", help="Output VCF file.")
     subparser.set_defaults(func=call_command)
 
-    description = """Generate tabular data containing places of mutations from a reference genome. Takes a BAM
-               file. Outputs the positions, number of forward and reverse ACTG, deletions, insertions and
-               reference skipped, and the qualities of the ACTG SNP's."""
-
     args = parser.parse_args(system_args)
     return args
 
@@ -138,6 +136,7 @@ def test_command(args):
     """
     nn.test(args.model_file_path, args.test_file_path, args.vcf_file_path)
 
+
 def call_command(args):
     """YYY multiple files and write to stdout.
 
@@ -149,6 +148,7 @@ def call_command(args):
     """
     nn.call(args.model_file_path, args.ftr_file_path, args.vcf_file_path)
 
+
 def merge_command(args):
     """Merge multiple tabulated files and write to stdout.
 
@@ -159,6 +159,7 @@ def merge_command(args):
         parsed from sys.argv
     """
     features.merge(args.input_paths)
+
 
 def tabulate_command(args):
     """YYY multiple files and write to stdout.
@@ -172,7 +173,7 @@ def tabulate_command(args):
     if args.tnfract < 1.0 and args.truth_file is None:
         print("You must specify a truth file when requesting a subset of the true negative observations.", file=sys.stderr)
         exit(1)
-    features.create_tabular_data(args.input_file, args.output_file, args.ref_file, args.truth_file, args.tnfract, force_truth, args.rseed)
+    features.create_tabular_data(args.input_file, args.output_file, args.ref_file, args.truth_file, args.tnfract, args.force_truth, args.rseed)
 
 
 def run_command_from_args(args):
