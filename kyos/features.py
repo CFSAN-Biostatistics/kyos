@@ -393,21 +393,22 @@ def create_tabular_data(input_file, output_file, reference_file, truth_file=None
 
     convert_to_csv(observations, output_file)
 
-    def merge(input_paths):
-        """Merge multiple tabulated files and write to stdout.
 
-        Parameters
-        ----------
-        input_paths : list of str
-            List of tsv file paths
-        """
-        file_num = 0
-        for path in input_paths:
-            file_num += 1
-            with open(path) as f:
-                if file_num > 1:
-                    next(f)  # skip header line in all files after first
-                for line in f:
-                    sys.stdout.write(line)
+def merge(input_paths):
+    """Merge multiple tabulated files and write to stdout.
 
-        sys.stdout.flush()
+    Parameters
+    ----------
+    input_paths : list of str
+        List of tsv file paths
+    """
+    file_num = 0
+    for path in input_paths:
+        file_num += 1
+        with open(path) as f:
+            if file_num > 1:
+                next(f)  # skip header line in all files after first
+            for line in f:
+                sys.stdout.write(line)
+
+    sys.stdout.flush()
