@@ -13,15 +13,31 @@ from keras.layers import Dense, Activation
 from keras.callbacks import EarlyStopping
 import logging
 import numpy as np
+from timeit import default_timer as timer
 
-features = ["A", "T", "C", "G", "A_insertion", "T_insertion", "C_insertion", "G_insertion", "deletion"]
+from kyos import features
+
+output_classes = ["A", "T", "C", "G", "A_insertion", "T_insertion", "C_insertion", "G_insertion", "_deletion"]
 
 
-def relevant_data(data):
-    z = []
-    for x in range(len(data)):
-        if x > 2 and x < 29:
-            z.append(float(data[x]))
+def relevant_data(data, first_col, last_col):
+    """Extract the specified range of adjacent feature columns from a single observation row.
+
+    Parameters
+    ----------
+    data : list
+        List of feature and target columns.
+    first_col : int
+        First column index to select.
+    last_col : int
+        Last column index to select.
+
+    Examples
+    --------
+    >>> relevant_data(list(range(0, 30)), 3, 28)
+    [3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0]
+    """
+    z = [float(val) for val in data[first_col: 1 + last_col]]
     return z
 
 
@@ -37,28 +53,76 @@ def conv_allele(row):
     elif allele.upper() == "G":
         return 3
     elif "_insertion" in allele:
-        if allele[1].upper() == "A":
+        if allele[0].upper() == "A":
             return 4
-        elif allele[1].upper() == "T":
+        elif allele[0].upper() == "T":
             return 5
-        elif allele[1].upper() == "C":
+        elif allele[0].upper() == "C":
             return 6
-        elif allele[1].upper() == "G":
+        elif allele[0].upper() == "G":
             return 7
     elif "_deletion" in allele:
         return 8
     else:
-        print("Unkown Allele " + allele)
-        print(row)
-        return -1
+        raise ValueError("Unkown allele: %s\nRow: %s" % (allele, row))
 
 
 def conv_output(output):
     for x in range(len(output)):
         if output[x] > 0.7:
-            return features[x]
+            return output_classes[x]
 
     return "-"
+
+
+def load_train_data(path, first_ftr_col, last_ftr_col):
+    """Load training file with features and target class.
+
+    The features must be adjacent columns.
+    The traget must be the last column.
+    It is okay if there are some unused columns before the first feature and after the last feature.
+
+    Parameters
+    ----------
+    path : str
+        Path to tabulated feature file.
+    first_ftr_col : int
+        Zero-based index to first feature column.
+    first_ftr_col : int
+        Zero-based index to last feature column.
+
+    Returns
+    -------
+    features : nparray
+        Two dimensional array of features with one row per observation and one column per feature
+    one_hot_labels : nparray
+        One hot encoded target labels with one row per observation and one column per output class.
+        All columns will be 0 except the target column will be 1.
+    """
+    start = timer()
+
+    data = []
+    labels = []
+    row_count = 0
+
+    with open(path, "r") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter='\t')
+        header_row = csv_reader.next()
+        logging.debug("Column names are: %s" % str(header_row))
+        for row in csv_reader:
+            row_count += 1
+            data.append(relevant_data(row, first_ftr_col, last_ftr_col))
+            labels.append(conv_allele(row))
+
+    logging.debug("Converting features to np arrays...")
+    data = np.array(data, dtype=np.float32)
+
+    logging.debug("One-hot encoding target labels...")
+    one_hot_labels = keras.utils.to_categorical(labels, num_classes=9)
+
+    end = timer()
+    logging.debug("%.1f seconds loading %d rows in file %s" % (end - start, row_count, path))
+    return data, one_hot_labels
 
 
 def train(train_file_path, validate_file_path, model_file_path):
@@ -86,7 +150,7 @@ def train(train_file_path, validate_file_path, model_file_path):
                 print("Column names are, " + str(row))
                 line_count += 1
             else:
-                data.append(relevant_data(row))
+                data.append(relevant_data(row, features.first_ftr_idx, features.last_ftr_idx))
                 labels.append(conv_allele(row[-1]))
 
     data_validation = []
@@ -101,7 +165,7 @@ def train(train_file_path, validate_file_path, model_file_path):
                 print("Column names are, " + str(row))
                 line_count += 1
             else:
-                data_validation.append(relevant_data(row))
+                data_validation.append(relevant_data(row, features.first_ftr_idx, features.last_ftr_idx))
                 label_validation.append(conv_allele(row[-1]))
 
     model = Sequential()
@@ -162,7 +226,7 @@ def test(model_file_path, test_file_path, vcf_file_path=None):
                 print("Column names are, " + str(row))
                 line_count += 1
             else:
-                data.append(relevant_data(row))
+                data.append(relevant_data(row, features.first_ftr_idx, features.last_ftr_idx))
                 reference.append(row[-2])
                 labels.append(conv_allele(row))
 
@@ -181,7 +245,7 @@ def test(model_file_path, test_file_path, vcf_file_path=None):
 
         predicted_output = conv_output(prediction[row])
 
-        truth_call = features[labels[row]]
+        truth_call = output_classes[labels[row]]
 
         correct_call_flag = predicted_output == truth_call
 

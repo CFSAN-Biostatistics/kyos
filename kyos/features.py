@@ -24,6 +24,9 @@ PerBaseTuple = namedtuple("PerBaseTuple", ['A', 'T', 'C', 'G', 'N', 'DEL', 'INS'
 feature_names = ["SampleName", "Chrom", "Position", "A", "T", "C", "G", "N", "a", "t", "c", "g", "n", "Insertion", "Deletion", "MapqA", "MapqT", "MapqC", "MapqG", "MapqN", "MapqDel", "MapqIns",
                  "BaseQualA", "BaseQualT", "BaseQualC", "BaseQualG", "BaseQualN", "BaseQualDel", "BaseQualIns", "RefBase"]
 
+first_ftr_idx = feature_names.index("A")
+last_ftr_idx = feature_names.index("BaseQualIns")
+
 
 def mkdir_p(path):
     """Python equivalent of bash mkdir -p.
