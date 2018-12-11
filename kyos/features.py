@@ -1,10 +1,11 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 """
-This script extracts features useful for detecting variants from a BAM file.
+This module extracts features useful for detecting variants from a BAM file.
 """
 
 from __future__ import print_function
+from __future__ import absolute_import
 
 from Bio import SeqIO
 from collections import Counter

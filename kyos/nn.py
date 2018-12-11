@@ -1,11 +1,18 @@
-from __future__ import print_function
+# -*- coding: utf-8 -*-
 
+"""This module is the neural network portion of Kyos.
+"""
+
+from __future__ import print_function
+from __future__ import absolute_import
+
+import csv
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Activation
 from keras.callbacks import EarlyStopping
+import logging
 import numpy as np
-import csv
 
 features = ["A", "T", "C", "G", "A_insertion", "T_insertion", "C_insertion", "G_insertion", "deletion"]
 
