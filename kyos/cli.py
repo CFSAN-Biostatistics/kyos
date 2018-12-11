@@ -230,11 +230,11 @@ def main():
     -------
     The return value is passed to sys.exit().
     """
-    enable_log_timestamps = False
+    enable_log_timestamps = True
     if enable_log_timestamps:
-        logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
+        logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.DEBUG)
     else:
-        logging.basicConfig(format="%(message)s", level=logging.INFO)
+        logging.basicConfig(format="%(message)s", level=logging.DEBUG)
     args = parse_arguments(sys.argv[1:])
     return args.func(args)  # this executes the function previously associated with the subparser with set_defaults
 
