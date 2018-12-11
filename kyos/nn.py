@@ -138,36 +138,11 @@ def train(train_file_path, validate_file_path, model_file_path):
         Output trained model.
     """
 
-    data = []
-    labels = []
+    logging.debug("Loading data...")
+    data, one_hot_labels = load_train_data(train_file_path, features.first_ftr_idx, features.last_ftr_idx)
+    data_validation, one_hot_label_validation = load_train_data(validate_file_path, features.first_ftr_idx, features.last_ftr_idx)
 
-    line_count = 0
-
-    with open(train_file_path, "r") as csv_file:
-        csv_reader = csv.reader(csv_file, delimiter='\t')
-        for row in csv_reader:
-            if line_count == 0:
-                print("Column names are, " + str(row))
-                line_count += 1
-            else:
-                data.append(relevant_data(row, features.first_ftr_idx, features.last_ftr_idx))
-                labels.append(conv_allele(row[-1]))
-
-    data_validation = []
-    label_validation = []
-
-    line_count = 0
-
-    with open(validate_file_path, "r") as csv_file:
-        csv_reader = csv.reader(csv_file, delimiter='\t')
-        for row in csv_reader:
-            if line_count == 0:
-                print("Column names are, " + str(row))
-                line_count += 1
-            else:
-                data_validation.append(relevant_data(row, features.first_ftr_idx, features.last_ftr_idx))
-                label_validation.append(conv_allele(row[-1]))
-
+    logging.debug("Defining model...")
     model = Sequential()
     model.add(Dense(40, input_dim=26))
     model.add(Activation("relu"))
@@ -182,22 +157,20 @@ def train(train_file_path, validate_file_path, model_file_path):
     model.add(Activation("relu"))
 
     model.add(Dense(9, activation='softmax'))
+
+    logging.debug("Compiling model...")
     model.compile(optimizer='rmsprop',
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
 
-    data = np.array(data)
-    data_validation = np.array(data_validation)
-
     early_stopping_monitor = EarlyStopping(patience=3)
 
-    one_hot_labels = keras.utils.to_categorical(labels, num_classes=9)
-
-    one_hot_label_validation = keras.utils.to_categorical(label_validation, num_classes=9)
-
+    logging.debug("Fitting model...")
     model.fit(data, one_hot_labels, validation_data=(data_validation, one_hot_label_validation), batch_size=128, callbacks=[early_stopping_monitor], epochs=30)
 
+    logging.debug("Saving model...")
     model.save(model_file_path)
+    logging.debug("Training finished.")
 
 
 def test(model_file_path, test_file_path, vcf_file_path=None):
