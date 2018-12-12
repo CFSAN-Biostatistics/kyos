@@ -12,7 +12,9 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation
 from keras.callbacks import EarlyStopping
 import logging
+import random
 import numpy as np
+import tensorflow as tf
 from timeit import default_timer as timer
 
 from kyos import features
@@ -108,7 +110,7 @@ def load_train_data(path, first_ftr_col, last_ftr_col):
     with open(path, "r") as csv_file:
         csv_reader = csv.reader(csv_file, delimiter='\t')
         header_row = csv_reader.next()
-        logging.debug("Column names are: %s" % str(header_row))
+        #logging.debug("Column names are: %s" % str(header_row))
         for row in csv_reader:
             row_count += 1
             data.append(relevant_data(row, first_ftr_col, last_ftr_col))
@@ -125,7 +127,7 @@ def load_train_data(path, first_ftr_col, last_ftr_col):
     return data, one_hot_labels
 
 
-def train(train_file_path, validate_file_path, model_file_path):
+def train(train_file_path, validate_file_path, model_file_path, rseed=None):
     """Train a neural network to detect variants.
 
     Parameters
@@ -136,7 +138,26 @@ def train(train_file_path, validate_file_path, model_file_path):
         Input tabulated feature file for validation during training.
     model_file_path : str
         Output trained model.
+    rseed : int
+        Random seed to ensure reproducible results.  Set to zero for non-deterministic results.
     """
+    if rseed:
+        logging.info("************************************************************************************************")
+        logging.info("NOTICE: setting the random seed also forces single-threaded execution to ensure reproducibility.")
+        logging.info("************************************************************************************************")
+        logging.debug("Setting random seed = %d" % rseed)
+        random.seed(rseed)
+        np.random.seed(rseed)
+        tf.set_random_seed(rseed)
+
+        # Limit operation to 1 thread for deterministic results.
+        session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+        sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
+        keras.backend.set_session(sess)
+    else:
+        logging.info("************************************************************************************************")
+        logging.info("NOTICE: results are not reproducible when rseed is not set.")
+        logging.info("************************************************************************************************")
 
     logging.debug("Loading data...")
     data, one_hot_labels = load_train_data(train_file_path, features.first_ftr_idx, features.last_ftr_idx)

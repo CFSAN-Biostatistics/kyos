@@ -248,12 +248,14 @@ def create_tabular_data(input_file, output_file, reference_file, truth_file=None
         Path to output TSV file
     reference_file : str
         Path to reference fasta file
-    sample_name : str
-        Sample name
     truth_file : str
         Path to the file containing the truth allele
     tn_fraction : float
         Fraction of True Negatives to write to the output file.
+    force_truth : bool
+        Extract all known variant observations even if there is no coverage. Requires a summary file.
+    rseed : int
+        Random seed to ensure reproducible results.  Set to zero for non-deterministic results.
     """
     if rseed:
         random.seed(rseed)

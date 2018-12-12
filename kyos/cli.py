@@ -68,19 +68,20 @@ def parse_arguments(system_args):
     subparser.add_argument(dest="input_paths", type=str, metavar="INFILE", help="Input tabulated feature files.", nargs='+')
     subparser.set_defaults(func=merge_command)'''
 
+    help_str = "Extract and tabulate informative features from a BAM file."
     description = """Generate tabular data containing places of mutations from a reference genome. Takes a BAM
            file. Outputs the positions, number of forward and reverse ACTG, deletions, insertions and
            reference skipped, and the qualities of the ACTG SNP's."""
 
-    subparser = subparsers.add_parser("tabulate", formatter_class=formatter_class, description=description, help=description)
+    subparser = subparsers.add_parser("tabulate", formatter_class=formatter_class, description=description, help=help_str)
 
     subparser.add_argument(dest="input_file",       type=str,    help="Input sorted bam file.")
     subparser.add_argument(dest="output_file",      type=str,    help="Output tabular data file.")
     subparser.add_argument(dest="ref_file",         type=str,    help="Input reference file.")
     subparser.add_argument("-t", "--truth", dest="truth_file", type=str, help="SNP Mutator summary file containing truth allele.", default=None)
     subparser.add_argument("-f", "--tnfract", dest="tnfract", type=float, help="Fraction of True Negatives to write to the output file.", default=1.0)
-    subparser.add_argument("-s", "--rseed", dest="rseed", type=int, help="Random seed to ensure reproducible results when using --tnfract.")
-    subparser.add_argument("--force_truth", dest="force_truth", action='store_true', help="Put in mutations that have no coverage. Requires a summary file", default=False)
+    subparser.add_argument("-s", "--rseed", dest="rseed", type=int, help="Random seed to ensure reproducible results when using --tnfract.  Set to zero for non-deterministic results.", default=1)
+    subparser.add_argument("--force_truth", dest="force_truth", action='store_true', help="Extract all known variant observations even if there is no coverage. Requires a summary file.", default=False)
     subparser.set_defaults(func=tabulate_command)
 
     description = "Merge multiple tabulated files and write to stdout."
@@ -93,6 +94,7 @@ def parse_arguments(system_args):
     subparser.add_argument(dest="train_file_path", type=str, metavar="FTR", help="Input tabulated feature file for training.")
     subparser.add_argument(dest="validate_file_path", type=str, metavar="FTR", help="Input tabulated feature file for validation during training.")
     subparser.add_argument(dest="model_file_path", type=str, metavar="MODEL", help="Output trained model.")
+    subparser.add_argument("--rseed", dest="rseed", type=int, help="Random seed to ensure reproducible results.  Set to non-zero value for reproducible results.", default=0)
     subparser.set_defaults(func=train_command)
 
     description = "Test a neural network model when the truth is known."
@@ -114,7 +116,7 @@ def parse_arguments(system_args):
 
 
 def train_command(args):
-    """XXX data from a file.
+    """Train a neural network to detect variants.
 
     Parameters
     ----------
@@ -122,7 +124,7 @@ def train_command(args):
         Command line arguments stored as attributes of a Namespace, usually
         parsed from sys.argv
     """
-    nn.train(args.train_file_path, args.validate_file_path, args.model_file_path)
+    nn.train(args.train_file_path, args.validate_file_path, args.model_file_path, args.rseed)
 
 
 def test_command(args):
