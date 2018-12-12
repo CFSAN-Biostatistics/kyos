@@ -71,7 +71,10 @@ def read_summary_file(summary_file):
         for line in f:
             z = line.split()
             key = z[0] + " " + z[1]
-            truth[key] = [z[2].upper(), z[3].upper()]
+            truth_var = z[3].upper()
+            if truth_var.endswith("_insertion"): #Strip off reference from insertions
+                truth_var = truth_var[1:]
+            truth[key] = [z[2].upper(), z[3]]
 
     return truth
 
