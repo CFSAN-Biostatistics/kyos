@@ -12,12 +12,23 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation
 from keras.callbacks import EarlyStopping
 import logging
+import pandas as pd
 import random
 import numpy as np
 import tensorflow as tf
 from timeit import default_timer as timer
 
 from kyos import features
+
+
+# Zero-based index to first feature column.
+first_ftr_idx = features.feature_names.index(features.first_ftr_name)
+
+# Zero-based index to last feature column.
+last_ftr_idx = features.feature_names.index(features.last_ftr_name)
+
+# the truth column is appended to feature_names when the truth file is provided
+target_label_name = features.target_label_name
 
 output_classes = ["A", "T", "C", "G", "A_insertion", "T_insertion", "C_insertion", "G_insertion", "_deletion"]
 
@@ -43,9 +54,7 @@ def relevant_data(data, first_col, last_col):
     return z
 
 
-def conv_allele(row):
-    allele = row[-1]
-
+def conv_allele(allele):
     if allele.upper() == "A":
         return 0
     elif allele.upper() == "T":
@@ -66,7 +75,7 @@ def conv_allele(row):
     elif "_deletion" in allele:
         return 8
     else:
-        raise ValueError("Unkown allele: %s\nRow: %s" % (allele, row))
+        raise ValueError("Unknown allele: %s" % (allele))
 
 
 def conv_output(output):
@@ -81,7 +90,7 @@ def load_train_data(path, first_ftr_col, last_ftr_col):
     """Load training file with features and target class.
 
     The features must be adjacent columns.
-    The traget must be the last column.
+    The target must be the last column.
     It is okay if there are some unused columns before the first feature and after the last feature.
 
     Parameters
@@ -108,16 +117,16 @@ def load_train_data(path, first_ftr_col, last_ftr_col):
     row_count = 0
 
     with open(path, "r") as csv_file:
-        csv_reader = csv.reader(csv_file, delimiter='\t')
-        csv_reader.next()  # skip header row
-        # logging.debug("Column names are: %s" % str(header_row))
-        for row in csv_reader:
-            row_count += 1
-            data.append(relevant_data(row, first_ftr_col, last_ftr_col))
-            labels.append(conv_allele(row))
+        logging.debug("Reading tsv file...")
+        feature_columns = features.feature_names[first_ftr_col: 1 + last_ftr_col]
+        usecols = feature_columns + [target_label_name]
+        dtype = {col: np.float32 for col in feature_columns}
+        converters = {target_label_name: conv_allele}
+        df = pd.read_csv(csv_file, sep='\t', usecols=usecols, dtype=dtype, converters=converters)
 
-    logging.debug("Converting features to np arrays...")
-    data = np.array(data, dtype=np.float32)
+    logging.debug("Extracting columns to np arrays...")
+    data = df[feature_columns].values
+    labels = df[target_label_name].values
 
     logging.debug("One-hot encoding target labels...")
     one_hot_labels = keras.utils.to_categorical(labels, num_classes=9)
@@ -160,8 +169,8 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
         logging.info("************************************************************************************************")
 
     logging.debug("Loading data...")
-    data, one_hot_labels = load_train_data(train_file_path, features.first_ftr_idx, features.last_ftr_idx)
-    data_validation, one_hot_label_validation = load_train_data(validate_file_path, features.first_ftr_idx, features.last_ftr_idx)
+    data, one_hot_labels = load_train_data(train_file_path, first_ftr_idx, last_ftr_idx)
+    data_validation, one_hot_label_validation = load_train_data(validate_file_path, first_ftr_idx, last_ftr_idx)
 
     logging.debug("Defining model...")
     model = Sequential()
@@ -220,9 +229,9 @@ def test(model_file_path, test_file_path, vcf_file_path=None):
                 print("Column names are, " + str(row))
                 line_count += 1
             else:
-                data.append(relevant_data(row, features.first_ftr_idx, features.last_ftr_idx))
+                data.append(relevant_data(row))
                 reference.append(row[-2])
-                labels.append(conv_allele(row))
+                labels.append(conv_allele(row[-1]))
 
     model = keras.models.load_model(model_file_path)
 

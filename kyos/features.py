@@ -28,8 +28,10 @@ TruthTuple = namedtuple("TruthTuple", ['ref_base', 'variant'])
 feature_names = ["SampleName", "Chrom", "Position", "A", "T", "C", "G", "N", "a", "t", "c", "g", "n", "Insertion", "Deletion", "MapqA", "MapqT", "MapqC", "MapqG", "MapqN", "MapqDel", "MapqIns",
                  "BaseQualA", "BaseQualT", "BaseQualC", "BaseQualG", "BaseQualN", "BaseQualDel", "BaseQualIns", "RefBase"]
 
-first_ftr_idx = feature_names.index("A")
-last_ftr_idx = feature_names.index("BaseQualIns")
+# Expose feature names to the nn module
+first_ftr_name = "A"
+last_ftr_name = "BaseQualIns"
+target_label_name = "Truth"
 
 
 def mkdir_p(path):
