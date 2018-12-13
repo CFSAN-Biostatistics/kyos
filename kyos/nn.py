@@ -109,8 +109,8 @@ def load_train_data(path, first_ftr_col, last_ftr_col):
 
     with open(path, "r") as csv_file:
         csv_reader = csv.reader(csv_file, delimiter='\t')
-        header_row = csv_reader.next()
-        #logging.debug("Column names are: %s" % str(header_row))
+        csv_reader.next()  # skip header row
+        # logging.debug("Column names are: %s" % str(header_row))
         for row in csv_reader:
             row_count += 1
             data.append(relevant_data(row, first_ftr_col, last_ftr_col))

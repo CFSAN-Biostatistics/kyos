@@ -9,10 +9,10 @@ structured as needed by CFSAN SNP Pipeline.
 from __future__ import print_function
 
 import numpy as np
-import random
 import os
 import subprocess
 import sys
+
 
 def draw_random_normal(mu, std, minimum, maximum):
     """Draw samples from a modified random normal distribution with the tails
@@ -25,8 +25,8 @@ def draw_random_normal(mu, std, minimum, maximum):
 
 
 def run_art_bash(in_directory, out_directory, filename, seed, coverage, log_file_path=None):
-    inputFile= os.path.join(in_directory, filename + ".fasta")
-    outputDir= os.path.join(out_directory, filename)
+    inputFile = os.path.join(in_directory, filename + ".fasta")
+    outputDir = os.path.join(out_directory, filename)
     subprocess.call("mkdir -p " + outputDir, shell=True)
     outputFile = os.path.join(outputDir, filename + "_")
     run_string = "art_illumina --noALN -i %s -p -l 250 -ss MSv1 -f %.1f -m 500 -s 85 -rs %d -o %s" % (inputFile, coverage, seed, outputFile)
@@ -58,5 +58,6 @@ def main():
             coverage = draw_random_normal(mu, std, minimum, maximum)
             run_art_bash(in_directory, out_directory, filename.replace(".fasta", ""), rseed, coverage, log_file_path)
             rseed += 1
+
 
 main()
