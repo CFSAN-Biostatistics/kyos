@@ -12,6 +12,7 @@ from collections import Counter
 from collections import namedtuple
 import csv
 import errno
+import logging
 import os
 import pysam
 import random
@@ -19,6 +20,9 @@ import sys
 
 # Tuple to hold metrics per base
 PerBaseTuple = namedtuple("PerBaseTuple", ['A', 'T', 'C', 'G', 'N', 'DEL', 'INS'])
+
+# Tuple to hold truth dict value
+TruthTuple = namedtuple("TruthTuple", ['ref_base', 'variant'])
 
 
 feature_names = ["SampleName", "Chrom", "Position", "A", "T", "C", "G", "N", "a", "t", "c", "g", "n", "Insertion", "Deletion", "MapqA", "MapqT", "MapqC", "MapqG", "MapqN", "MapqDel", "MapqIns",
@@ -54,6 +58,15 @@ def mkdir_p(path):
 def read_summary_file(summary_file):
     """Read a SNP Mutator summary file to get the truth alleles.
 
+    The SNP Mutator summary file looks like this:
+
+    Replicate              Position  OriginalBase  NewBase
+    CFSAN000189_mutated_1  25183     g             T
+    CFSAN000189_mutated_1  34442     a             aA_insertion
+    CFSAN000189_mutated_1  42998     g             A
+    CFSAN000189_mutated_1  92950     a             _deletion
+    CFSAN000189_mutated_1  94829     g             C
+
     Parameters
     ----------
     summary_file : str
@@ -68,19 +81,19 @@ def read_summary_file(summary_file):
     truth = {}
 
     with open(summary_file, "r") as f:
+        f.next()  # skip first row with headers
         for line in f:
-            z = line.split()
-            key = z[0] + " " + z[1]
-            truth_var = z[3]
-            if truth_var.endswith("_insertion"): #Strip off reference from insertions
-                truth_var = truth_var[1:]
-            truth[key] = [z[2].upper(), truth_var]
+            replicate, pos, ref_base, truth_variant = line.split()
+            key = replicate + " " + pos
+            if truth_variant.endswith("_insertion"):  # Strip off reference base from insertions
+                truth_variant = truth_variant[1:]
+            truth[key] = TruthTuple(ref_base.upper(), truth_variant)
 
     return truth
 
 
-def check_mutated(pileup_base_counter, ref_seq_dict, chrom, position):
-    """Determines whether there is a mutation occuring at the position determined by the pileup column
+def any_variant_evidence(pileup_base_counter, ref_seq_dict, chrom, position):
+    """Determine whether there is any evidence of variation occuring at the position determined by the pileup column.
 
     Parameters
     ----------
@@ -96,7 +109,7 @@ def check_mutated(pileup_base_counter, ref_seq_dict, chrom, position):
     Returns
     -------
     bool
-        True if there is a mutation, false if there is not a mutation
+        True if there is any evidence of variant, false if there is not evidence
     """
     if len(pileup_base_counter) == 0:
         return False
@@ -300,29 +313,30 @@ def create_tabular_data(input_file, output_file, reference_file, truth_file=None
             key = sample_name + " " + str(pileupcolumn.pos + 1)
             mutated_position_flag = key in truth_dict
             if mutated_position_flag:
-                observation["Truth"] = truth_dict[key][1].upper()
+                # TODO: test this for insertions and deletions, not sure this will work properly
+                observation["Truth"] = truth_dict[key].variant.upper()
             else:
                 observation["Truth"] = observation["RefBase"]
 
         if len(pileup_bases) == 0:
             # no coverage at this position
-            print(pileupcolumn.pos, "No coverage at base quality", min_base_quality, file=sys.stderr)
+            logging.debug("%d No coverage at base quality %d" % (pileupcolumn.pos + 1, min_base_quality))
             if force_truth and mutated_position_flag:
-                print("wow")
                 observations.append(observation)
                 all_positions.add(sample_name + " " + str(pileupcolumn.pos + 1))
+                logging.debug("Added no-coverage known true mutation for %s at %d" % (sample_name, pileupcolumn.pos + 1))
             continue
 
         base_counts = Counter(pileup_bases)
 
-        is_mutated = check_mutated(base_counts, ref_seq_dict, contig, pileupcolumn.pos)
+        is_any_variant_evidence = any_variant_evidence(base_counts, ref_seq_dict, contig, pileupcolumn.pos)
 
         in_summary = force_truth and mutated_position_flag
 
         '''if in_summary:
             print(in_summary, pileupcolumn.pos, key)'''
 
-        if is_mutated or in_summary:
+        if is_any_variant_evidence or in_summary:
             if tn_fraction < 1.0 and not mutated_position_flag and random.random() > tn_fraction:
                 continue
 
@@ -377,9 +391,9 @@ def create_tabular_data(input_file, output_file, reference_file, truth_file=None
 
     for key, value in truth_dict.iteritems():
         try:
-            splitted = key.split()
-            position = int(splitted[1])
-            if sample_name == splitted[0] and key not in all_positions:
+            replicate, position_str = key.split()
+            position = int(position_str)
+            if sample_name == replicate and key not in all_positions:
                 observation = {}  # dictionary of features keyed by feature_names
 
                 for x in feature_names:
@@ -389,18 +403,21 @@ def create_tabular_data(input_file, output_file, reference_file, truth_file=None
                 contig = ""
 
                 observation["Chrom"] = "chrom"
-                observation["RefBase"] = value[0]
-                observation["SampleName"] = splitted[0]
+                observation["RefBase"] = value.ref_base
+                observation["SampleName"] = sample_name
                 observation["Position"] = position
-                observation["Truth"] = value[1]
+                observation["Truth"] = value.variant
 
                 observations.append(observation)
+                logging.debug("Added missing known true mutation for %s at %d" % (sample_name, position))
         except Exception:
-            print(key, value)
+            logging.exception("Exception with truth dict.  key: %s value: %s", repr(key), repr(value))
 
     samfile.close()
 
+    logging.debug("Converting to csv...")
     convert_to_csv(observations, output_file)
+    logging.debug("Tabulate finished.")
 
 
 def merge(input_paths):
