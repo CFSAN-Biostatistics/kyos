@@ -226,10 +226,10 @@ def test(model_file_path, test_file_path, vcf_file_path=None):
         csv_reader = csv.reader(csv_file, delimiter='\t')
         for row in csv_reader:
             if line_count == 0:
-                print("Column names are, " + str(row))
+                # print("Column names are, " + str(row))
                 line_count += 1
             else:
-                data.append(relevant_data(row))
+                data.append(relevant_data(row, first_ftr_idx, last_ftr_idx))
                 reference.append(row[-2])
                 labels.append(conv_allele(row[-1]))
 
