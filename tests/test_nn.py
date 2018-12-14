@@ -121,7 +121,7 @@ def test_load_test_data_all_classes(tmpdir):
 
     assert(ftrs.dtype == np.float32)
     assert(targets.dtype == np.int64)
-    assert(refs.dtype == np.object)
+    assert(refs.dtype == np.int64)
 
     assert(np.array_equal(ftrs, np.array(
       [[3., 4., 5.],
@@ -138,4 +138,4 @@ def test_load_test_data_all_classes(tmpdir):
       [0, 1, 2, 3, 4, 5, 6, 7, 8])))
 
     assert(np.array_equal(refs, np.array(
-      ["A", "G", "G", "C", "C", "C", "T", "G", "A"])))
+      [0, 3, 3, 2, 2, 2, 1, 3, 0])))

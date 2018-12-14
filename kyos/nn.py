@@ -132,7 +132,7 @@ def load_train_data(path, first_ftr_col, last_ftr_col):
 
 
 def load_test_data(path, first_ftr_col, last_ftr_col):
-    """Load training file with features and target class.
+    """Load testing file with features and target class.
 
     The features must be adjacent columns.
     The target must be the last column.
@@ -151,9 +151,10 @@ def load_test_data(path, first_ftr_col, last_ftr_col):
     -------
     features : nparray
         Two dimensional array of features with one row per observation and one column per feature
-    one_hot_labels : nparray
-        One hot encoded target labels with one row per observation and one column per output class.
-        All columns will be 0 except the target column will be 1.
+    labels : nparray
+        Integer encoded labels with one row per observation
+    refs : nparray
+        Integer encoded references with one row per observation
     """
     start = timer()
 
@@ -162,7 +163,7 @@ def load_test_data(path, first_ftr_col, last_ftr_col):
         feature_columns = features.feature_names[first_ftr_col: 1 + last_ftr_col]
         usecols = feature_columns + [target_label_name] + ["RefBase"]
         dtype = {col: np.float32 for col in feature_columns}
-        converters = {target_label_name: conv_allele}
+        converters = {target_label_name: conv_allele, "RefBase": conv_allele}
         df = pd.read_csv(csv_file, sep='\t', usecols=usecols, dtype=dtype, converters=converters)
 
     logging.debug("Extracting columns to np arrays...")
@@ -259,35 +260,26 @@ def test(model_file_path, test_file_path, vcf_file_path=None):
 
     model = keras.models.load_model(model_file_path)
 
-    false_positives = 0
-    false_negatives = 0
-    true_positive = 0
-    true_negative = 0
-
     prediction = model.predict(data)
 
-    for row in range(len(prediction)):
+    output = np.argmax(prediction, axis=1)
 
-        predicted_output = conv_output(prediction[row])
+    df = pd.DataFrame({"output": output, "labels": labels, "reference": reference})
 
-        truth_call = output_classes[labels[row]]
+    df["Mutation"] = df.labels != df.reference
 
-        correct_call_flag = predicted_output == truth_call
+    df["Correct_call"] = df.output == df.labels
+    df["TN"] = (~df.Mutation) & df.Correct_call
+    df["TP"] = df.Mutation & df.Correct_call
+    df["FP"] = (~df.Mutation) & (~df.Correct_call)
+    df["FN"] = df.Mutation & (~df.Correct_call)
 
-        if correct_call_flag:
-            if truth_call != reference[row]:
-                true_positive += 1
-            else:
-                true_negative += 1
-        else:  # incorrect call
-            if truth_call == "-":
-                continue
-            if truth_call != reference[row]:
-                false_negatives += 1
-            else:
-                false_positives += 1
+    false_positives = df["FP"].sum()
+    false_negatives = df["FN"].sum()
+    true_positives = df["TP"].sum()
+    true_negatives = df["TN"].sum()
 
-    print("FP:", false_positives, "FN:", false_negatives, "TP:", true_positive, "TN:", true_negative)
+    print("FP:", false_positives, "FN:", false_negatives, "TP:", true_positives, "TN:", true_negatives)
 
 
 def call(model_file_path, ftr_file_path, vcf_file_path):
