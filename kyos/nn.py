@@ -6,7 +6,6 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
-import csv
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Activation
@@ -112,10 +111,6 @@ def load_train_data(path, first_ftr_col, last_ftr_col):
     """
     start = timer()
 
-    data = []
-    labels = []
-    row_count = 0
-
     with open(path, "r") as csv_file:
         logging.debug("Reading tsv file...")
         feature_columns = features.feature_names[first_ftr_col: 1 + last_ftr_col]
@@ -132,8 +127,52 @@ def load_train_data(path, first_ftr_col, last_ftr_col):
     one_hot_labels = keras.utils.to_categorical(labels, num_classes=9)
 
     end = timer()
-    logging.debug("%.1f seconds loading %d rows in file %s" % (end - start, row_count, path))
+    logging.debug("%.1f seconds loading %d rows in file %s" % (end - start, len(df), path))
     return data, one_hot_labels
+
+
+def load_test_data(path, first_ftr_col, last_ftr_col):
+    """Load training file with features and target class.
+
+    The features must be adjacent columns.
+    The target must be the last column.
+    It is okay if there are some unused columns before the first feature and after the last feature.
+
+    Parameters
+    ----------
+    path : str
+        Path to tabulated feature file.
+    first_ftr_col : int
+        Zero-based index to first feature column.
+    first_ftr_col : int
+        Zero-based index to last feature column.
+
+    Returns
+    -------
+    features : nparray
+        Two dimensional array of features with one row per observation and one column per feature
+    one_hot_labels : nparray
+        One hot encoded target labels with one row per observation and one column per output class.
+        All columns will be 0 except the target column will be 1.
+    """
+    start = timer()
+
+    with open(path, "r") as csv_file:
+        logging.debug("Reading tsv file...")
+        feature_columns = features.feature_names[first_ftr_col: 1 + last_ftr_col]
+        usecols = feature_columns + [target_label_name] + ["RefBase"]
+        dtype = {col: np.float32 for col in feature_columns}
+        converters = {target_label_name: conv_allele}
+        df = pd.read_csv(csv_file, sep='\t', usecols=usecols, dtype=dtype, converters=converters)
+
+    logging.debug("Extracting columns to np arrays...")
+    data = df[feature_columns].values
+    labels = df[target_label_name].values
+    refs = df["RefBase"].values
+
+    end = timer()
+    logging.debug("%.1f seconds loading %d rows in file %s" % (end - start, len(df), path))
+    return data, labels, refs
 
 
 def train(train_file_path, validate_file_path, model_file_path, rseed=None):
@@ -215,23 +254,8 @@ def test(model_file_path, test_file_path, vcf_file_path=None):
     vcf_file_path : str, optional
         Optional output VCF file.
     """
-    data = []
-    labels = []
 
-    line_count = 0
-
-    reference = []
-
-    with open(test_file_path, "r") as csv_file:
-        csv_reader = csv.reader(csv_file, delimiter='\t')
-        for row in csv_reader:
-            if line_count == 0:
-                # print("Column names are, " + str(row))
-                line_count += 1
-            else:
-                data.append(relevant_data(row, first_ftr_idx, last_ftr_idx))
-                reference.append(row[-2])
-                labels.append(conv_allele(row[-1]))
+    data, labels, reference = load_test_data(test_file_path, first_ftr_idx, last_ftr_idx)
 
     model = keras.models.load_model(model_file_path)
 
@@ -239,8 +263,6 @@ def test(model_file_path, test_file_path, vcf_file_path=None):
     false_negatives = 0
     true_positive = 0
     true_negative = 0
-
-    data = np.array(data)
 
     prediction = model.predict(data)
 
