@@ -216,15 +216,15 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
     model = Sequential()
     model.add(Dense(40, input_dim=26))
     model.add(Activation("relu"))
-    model.add(Dropout(0.1))
+    model.add(Dropout(0.2))
 
     model.add(Dense(30))
     model.add(Activation("relu"))
-    model.add(Dropout(0.1))
+    model.add(Dropout(0.2))
 
     model.add(Dense(30))
     model.add(Activation("relu"))
-    model.add(Dropout(0.1))
+    model.add(Dropout(0.2))
 
     model.add(Dense(30))
     model.add(Activation("relu"))
