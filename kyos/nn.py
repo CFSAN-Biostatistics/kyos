@@ -8,7 +8,7 @@ from __future__ import absolute_import
 
 import keras
 from keras.models import Sequential
-from keras.layers import Dense, Activation
+from keras.layers import Dense, Activation, Dropout
 from keras.callbacks import EarlyStopping
 import logging
 import pandas as pd
@@ -216,12 +216,15 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
     model = Sequential()
     model.add(Dense(40, input_dim=26))
     model.add(Activation("relu"))
+    model.add(Dropout(0.1))
 
     model.add(Dense(30))
     model.add(Activation("relu"))
+    model.add(Dropout(0.1))
 
     model.add(Dense(30))
     model.add(Activation("relu"))
+    model.add(Dropout(0.1))
 
     model.add(Dense(30))
     model.add(Activation("relu"))
