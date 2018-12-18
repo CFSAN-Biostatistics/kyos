@@ -37,7 +37,7 @@ def test_load_train_data_all_classes(tmpdir):
     path = tmpdir.join("ftrFile.tsv")
     path.write(content)
 
-    ftrs, targets = nn.load_train_data(str(path), 3, 5)
+    ftrs, targets = nn.load_train_data(str(path), 3, 5, scaling=None)
 
     assert(ftrs.dtype == np.float32)
     assert(targets.dtype == np.float32)
@@ -85,7 +85,7 @@ def test_load_train_data_some_classes(tmpdir):
     path = tmpdir.join("ftrFile.tsv")
     path.write(content)
 
-    ftrs, targets = nn.load_train_data(str(path), 3, 5)
+    ftrs, targets = nn.load_train_data(str(path), 3, 5, scaling=None)
 
     assert(ftrs.dtype == np.float32)
     assert(targets.dtype == np.float32)
@@ -117,7 +117,7 @@ def test_load_test_data_all_classes(tmpdir):
     path = tmpdir.join("ftrFile.tsv")
     path.write(content)
 
-    ftrs, targets, refs = nn.load_test_data(str(path), 3, 5)
+    ftrs, targets, refs = nn.load_test_data(str(path), 3, 5, scaling=None)
 
     assert(ftrs.dtype == np.float32)
     assert(targets.dtype == np.int64)

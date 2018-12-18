@@ -85,7 +85,50 @@ def conv_output(output):
     return "-"
 
 
-def load_train_data(path, first_ftr_col, last_ftr_col):
+def normalize_features(df):
+    """Normalize the input features so the scaled features are scaled approximately in the range 0 to 1.
+
+    In practice, we found better results when the read count features are scaled in such a way that some
+    of the values are greater than 1.
+
+    The datafame is modified in-place.
+
+    Parameters
+    ----------
+    df : Pandas dataframe
+        Dataframe of features
+    """
+    # The scaling parameters below are hard-coded to be sure the same values will be used for training, testing,
+    # and calling variants.  It might happen that new datasets will have different distribution of values.
+    for ftr_name in features.read_count_feature_names:
+        df[ftr_name] = df[ftr_name] / 20.0  # 60th percentile, so some values will scale higher than 1
+    for ftr_name in features.map_quality_feature_names:
+        df[ftr_name] = df[ftr_name] / 100.0
+    for ftr_name in features.base_quality_feature_names:
+        df[ftr_name] = df[ftr_name] / 100.0
+
+
+def standardize_features(df):
+    """Standardize the input features so the scaled features are approximately centered around 0 with variance 1.
+
+    The datafame is modified in-place.
+
+    Parameters
+    ----------
+    df : Pandas dataframe
+        Dataframe of features
+    """
+    # The scaling parameters below are hard-coded to be sure the same values will be used for training, testing,
+    # and calling variants.  It might happen that new datasets will have different distribution of values.
+    for ftr_name in features.read_count_feature_names:
+        df[ftr_name] = (df[ftr_name] - 6.0) / 11.0
+    for ftr_name in features.map_quality_feature_names:
+        df[ftr_name] = (df[ftr_name] - 50.0) / 50.0
+    for ftr_name in features.base_quality_feature_names:
+        df[ftr_name] = (df[ftr_name] - 50.0) / 50.0
+
+
+def load_train_data(path, first_ftr_col, last_ftr_col, scaling="normalize"):
     """Load training file with features and target class.
 
     The features must be adjacent columns.
@@ -100,6 +143,9 @@ def load_train_data(path, first_ftr_col, last_ftr_col):
         Zero-based index to first feature column.
     first_ftr_col : int
         Zero-based index to last feature column.
+    scaling : str, optional
+        String specifying how to scale the input features.
+        Possible values are: "normalize" and "standardize".  By default, features are normalized.
 
     Returns
     -------
@@ -119,6 +165,13 @@ def load_train_data(path, first_ftr_col, last_ftr_col):
         converters = {target_label_name: conv_allele}
         df = pd.read_csv(csv_file, sep='\t', usecols=usecols, dtype=dtype, converters=converters)
 
+    if scaling == "normalize":
+        logging.debug("Normalizing features...")
+        normalize_features(df)
+    elif scaling == "standardize":
+        logging.debug("Standardizing features...")
+        standardize_features(df)
+
     logging.debug("Extracting columns to np arrays...")
     data = df[feature_columns].values
     labels = df[target_label_name].values
@@ -131,7 +184,7 @@ def load_train_data(path, first_ftr_col, last_ftr_col):
     return data, one_hot_labels
 
 
-def load_test_data(path, first_ftr_col, last_ftr_col):
+def load_test_data(path, first_ftr_col, last_ftr_col, scaling="normalize"):
     """Load testing file with features and target class.
 
     The features must be adjacent columns.
@@ -146,6 +199,9 @@ def load_test_data(path, first_ftr_col, last_ftr_col):
         Zero-based index to first feature column.
     first_ftr_col : int
         Zero-based index to last feature column.
+    scaling : str, optional
+        String specifying how to scale the input features.
+        Possible values are: "normalize" and "standardize".  By default, features are normalized.
 
     Returns
     -------
@@ -165,6 +221,13 @@ def load_test_data(path, first_ftr_col, last_ftr_col):
         dtype = {col: np.float32 for col in feature_columns}
         converters = {target_label_name: conv_allele, "RefBase": conv_allele}
         df = pd.read_csv(csv_file, sep='\t', usecols=usecols, dtype=dtype, converters=converters)
+
+    if scaling == "normalize":
+        logging.debug("Normalizing features...")
+        normalize_features(df)
+    elif scaling == "standardize":
+        logging.debug("Standardizing features...")
+        standardize_features(df)
 
     logging.debug("Extracting columns to np arrays...")
     data = df[feature_columns].values

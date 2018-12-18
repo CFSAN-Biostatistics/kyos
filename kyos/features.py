@@ -31,6 +31,9 @@ feature_names = ["SampleName", "Chrom", "Position", "A", "T", "C", "G", "N", "a"
 # Expose feature names to the nn module
 first_ftr_name = "A"
 last_ftr_name = "BaseQualIns"
+read_count_feature_names = ["A", "T", "C", "G", "N", "a", "t", "c", "g", "n", "Insertion", "Deletion"]
+map_quality_feature_names = ["MapqA", "MapqT", "MapqC", "MapqG", "MapqN", "MapqDel", "MapqIns"]
+base_quality_feature_names = ["BaseQualA", "BaseQualT", "BaseQualC", "BaseQualG", "BaseQualN", "BaseQualDel", "BaseQualIns"]
 target_label_name = "Truth"
 
 
