@@ -18,6 +18,7 @@ import tensorflow as tf
 from timeit import default_timer as timer
 
 from kyos import features
+from kyos.__init__ import __version__
 
 
 # Zero-based index to first feature column.
@@ -271,6 +272,7 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
         logging.info("NOTICE: results are not reproducible when rseed is not set.")
         logging.info("************************************************************************************************")
 
+    logging.debug("Kyos train, version %s" % __version__)
     logging.debug("Loading data...")
     data, one_hot_labels = load_train_data(train_file_path, first_ftr_idx, last_ftr_idx)
     data_validation, one_hot_label_validation = load_train_data(validate_file_path, first_ftr_idx, last_ftr_idx)
