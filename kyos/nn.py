@@ -27,6 +27,8 @@ first_ftr_idx = features.feature_names.index(features.first_ftr_name)
 # Zero-based index to last feature column.
 last_ftr_idx = features.feature_names.index(features.last_ftr_name)
 
+num_input_features = 1 + last_ftr_idx - first_ftr_idx
+
 # the truth column is appended to feature_names when the truth file is provided
 target_label_name = features.target_label_name
 
@@ -279,7 +281,7 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
 
     logging.debug("Defining model...")
     model = Sequential()
-    model.add(Dense(40, input_dim=26))
+    model.add(Dense(40, input_dim=num_input_features))
     model.add(Activation("relu"))
     model.add(Dropout(0.2))
 
