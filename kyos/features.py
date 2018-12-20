@@ -185,7 +185,7 @@ def mean(qualities):
 
 
 def get_average_qualities(pileup_alleles, pileup_qualities):
-    """Gets the average quality for each A,T,C,G,N, and deletions.
+    """Gets the average quality for each A,T,C,G,N, insertions and deletions.
 
     Parameters
     ----------
@@ -198,7 +198,7 @@ def get_average_qualities(pileup_alleles, pileup_qualities):
     Returns
     -------
     PerBaseTuple
-        Named tuple, PerBaseTuple, containing the average quality for each of (A,T,C,G,N,deletion)
+        Named tuple, PerBaseTuple, containing the average quality for each of (A,T,C,G,N,insertion,deletion)
     """
     qualA = []
     qualT = []
