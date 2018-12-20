@@ -298,17 +298,18 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
 
     model.add(Dense(9, activation='softmax'))
 
-    optimizer = keras.optimizers.RMSprop()
+    optimizer = keras.optimizers.RMSprop(lr=0.0005)
 
     logging.debug("Compiling model...")
     model.compile(optimizer=optimizer,
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
 
-    early_stopping_monitor = EarlyStopping(patience=3, restore_best_weights=True)
+    early_stopping_monitor = EarlyStopping(patience=10, restore_best_weights=True)
+    callbacks = [early_stopping_monitor]
 
     logging.debug("Fitting model...")
-    model.fit(data, one_hot_labels, validation_data=(data_validation, one_hot_label_validation), batch_size=1000, callbacks=[early_stopping_monitor], epochs=30)
+    model.fit(data, one_hot_labels, validation_data=(data_validation, one_hot_label_validation), batch_size=10000, callbacks=callbacks, epochs=50)
 
     logging.debug("Saving model...")
     model.save(model_file_path)

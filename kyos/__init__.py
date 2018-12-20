@@ -2,4 +2,4 @@
 
 __author__ = 'Nathan Xue'
 __email__ = 'xue.nathanv1.0@gmail.com'
-__version__ = '0.1.0.batch=1000.opt=RMSprop'
+__version__ = '0.1.0.batch=10000.opt=RMSprop.lr=0.0005.patience=10.epochs=50'
