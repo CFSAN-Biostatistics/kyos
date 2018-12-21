@@ -309,7 +309,7 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
     callbacks = [early_stopping_monitor]
 
     logging.debug("Fitting model...")
-    model.fit(data, one_hot_labels, validation_data=(data_validation, one_hot_label_validation), batch_size=10000, callbacks=callbacks, epochs=50)
+    model.fit(data, one_hot_labels, validation_data=(data_validation, one_hot_label_validation), batch_size=100000, callbacks=callbacks, epochs=100, verbose=2)
 
     logging.debug("Saving model...")
     model.save(model_file_path)
