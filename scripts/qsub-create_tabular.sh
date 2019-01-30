@@ -20,7 +20,7 @@ do
 done
 
 # Step 2: Submit the array job passing the 3 parameters in the create_tabular_array_params file
-echo 'qarrayrun SGE_TASK_ID create_tabular_array_params_train kyos tabulate --rseed 1 --truth SyntheticData/train/replicates/summary.tsv --tnfract 0.1 {1} {2} {3}' | \
+echo 'qarrayrun SGE_TASK_ID create_tabular_array_params_train kyos tabulate --rseed 1 --truth SyntheticData/train/replicates/summary.tsv --tnfract 1.0 {1} {2} {3}' | \
       qsub -N tab1 -t 1-$(cat create_tabular_array_params_train | wc -l) -cwd -j y -V
 
 echo 'qarrayrun SGE_TASK_ID create_tabular_array_params_validate kyos tabulate --truth SyntheticData/validate/replicates/summary.tsv {1} {2} {3}' | \
