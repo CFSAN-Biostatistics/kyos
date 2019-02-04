@@ -27,7 +27,8 @@ and Drug Administration, Center for Food Safety and Applied Nutrition.
 Features
 --------
 
-* TODO: Insert a bulleted list of features here
+* Extract features from a BAM file
+* Train and Test a neural network
 
 
 Citing Kyos
