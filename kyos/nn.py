@@ -18,6 +18,7 @@ import tensorflow as tf
 from timeit import default_timer as timer
 
 from kyos import features
+from kyos.__init__ import __version__
 
 
 # Zero-based index to first feature column.
@@ -25,6 +26,8 @@ first_ftr_idx = features.feature_names.index(features.first_ftr_name)
 
 # Zero-based index to last feature column.
 last_ftr_idx = features.feature_names.index(features.last_ftr_name)
+
+num_input_features = 1 + last_ftr_idx - first_ftr_idx
 
 # the truth column is appended to feature_names when the truth file is provided
 target_label_name = features.target_label_name
@@ -271,13 +274,14 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
         logging.info("NOTICE: results are not reproducible when rseed is not set.")
         logging.info("************************************************************************************************")
 
+    logging.debug("Kyos train, version %s" % __version__)
     logging.debug("Loading data...")
     data, one_hot_labels = load_train_data(train_file_path, first_ftr_idx, last_ftr_idx)
     data_validation, one_hot_label_validation = load_train_data(validate_file_path, first_ftr_idx, last_ftr_idx)
 
     logging.debug("Defining model...")
     model = Sequential()
-    model.add(Dense(40, input_dim=26))
+    model.add(Dense(40, input_dim=num_input_features))
     model.add(Activation("relu"))
     model.add(Dropout(0.2))
 
@@ -294,17 +298,18 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
 
     model.add(Dense(9, activation='softmax'))
 
-    optimizer = keras.optimizers.RMSprop()
+    optimizer = keras.optimizers.RMSprop(lr=0.0005)
 
     logging.debug("Compiling model...")
     model.compile(optimizer=optimizer,
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
 
-    early_stopping_monitor = EarlyStopping(patience=3, restore_best_weights=True)
+    early_stopping_monitor = EarlyStopping(patience=10, restore_best_weights=True)
+    callbacks = [early_stopping_monitor]
 
     logging.debug("Fitting model...")
-    model.fit(data, one_hot_labels, validation_data=(data_validation, one_hot_label_validation), batch_size=1000, callbacks=[early_stopping_monitor], epochs=30)
+    model.fit(data, one_hot_labels, validation_data=(data_validation, one_hot_label_validation), batch_size=100000, callbacks=callbacks, epochs=100, verbose=2)
 
     logging.debug("Saving model...")
     model.save(model_file_path)
