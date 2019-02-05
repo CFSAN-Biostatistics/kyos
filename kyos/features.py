@@ -25,10 +25,8 @@ PerBaseTuple = namedtuple("PerBaseTuple", ['A', 'T', 'C', 'G', 'N', 'DEL', 'INS'
 TruthTuple = namedtuple("TruthTuple", ['ref_base', 'variant'])
 
 
-feature_names = ["SampleName", "Chrom", "Position", "A", "T", "C", "G", "N", "a", "t", "c", "g", "n", "Insertion", "Deletion", 
-                "FracA", "FracT", "FracC", "FracG", "FracN", "FracIns", "FracDel",
-                "MapqA", "MapqT", "MapqC", "MapqG", "MapqN", "MapqDel", "MapqIns",
-                "BaseQualA", "BaseQualT", "BaseQualC", "BaseQualG", "BaseQualN", "BaseQualDel", "BaseQualIns", "RefBase"]
+feature_names = ["SampleName", "Chrom", "Position", "A", "T", "C", "G", "N", "a", "t", "c", "g", "n", "Insertion", "Deletion", "MapqA", "MapqT", "MapqC", "MapqG", "MapqN", "MapqDel", "MapqIns",
+                 "BaseQualA", "BaseQualT", "BaseQualC", "BaseQualG", "BaseQualN", "BaseQualDel", "BaseQualIns", "RefBase"]
 
 # Expose feature names to the nn module
 first_ftr_name = "A"
@@ -231,29 +229,6 @@ def get_average_qualities(pileup_alleles, pileup_qualities):
     return PerBaseTuple(mean(qualA), mean(qualT), mean(qualC), mean(qualG), mean(qualN), mean(qualDel), mean(qualIns))
 
 
-def get_frac_allele(observation):
-    """Gets the average counts for each A,T,C,G,N, insertions and deletions.
-
-    Parameters
-    ----------
-    observation : dictionary
-        dictionary containing counts of forward and reverse A,T,C,G,N, insertions and deletions
-
-    Returns
-    -------
-    PerBaseTuple
-        Named tuple, PerBaseTuple, containing the average quality for each of (A,T,C,G,N,insertion,deletion)
-    """
-    total = sum([observation[x] for x in feature_names[3:15]])+0.0
-
-    fractions = [observation[x]/total for x in feature_names[3:15]]
-    
-    for x in range(15,22):
-        observation[feature_names[x]] = fractions[x-15]
-
-    return fractions
-
-
 def read_ref_file(reference_path):
     """Read a fasta reference and return a dictionary of contigs.
 
@@ -388,8 +363,6 @@ def create_tabular_data(input_file, output_file, reference_file, truth_file=None
 
                     else:
                         print(1 + pileupcolumn.pos, "Unexpected base:", key, pileup_bases, file=sys.stderr)
-            
-            get_frac_allele(observation)
 
             mapping_qualities = pileupcolumn.get_mapping_qualities()
             base_qualities = pileupcolumn.get_query_qualities()
