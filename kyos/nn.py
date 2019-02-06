@@ -367,4 +367,4 @@ def call(model_file_path, ftr_file_path, vcf_file_path):
     vcf_file_path : str, optional
         Optional output VCF file.
     """
-    pass  # TODO
+    print('The "call" command is not implemented yet')

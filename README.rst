@@ -13,7 +13,7 @@ Kyos
 
 
 
-Tools for haploid variant calling with neural networks.
+Tools for haploid variant calling with Deep Neural Networks.
 
 Kyos was developed by the United States Food
 and Drug Administration, Center for Food Safety and Applied Nutrition.

@@ -45,7 +45,7 @@ def parse_arguments(system_args):
             raise argparse.ArgumentTypeError("Must be greater than 0")
         return ivalue
 
-    description = """Tools for haploid variant calling with neural networks."""
+    description = """Tools for haploid variant calling with Deep Neural Networks."""
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--version", action="version", version="%(prog)s version " + __version__)
     subparsers = parser.add_subparsers(dest="subparser_name", help=None, metavar="subcommand")
@@ -101,7 +101,7 @@ def parse_arguments(system_args):
     subparser = subparsers.add_parser("test", formatter_class=formatter_class, description=description, help=description)
     subparser.add_argument(dest="model_file_path", type=str, metavar="MODEL", help="Input trained model.")
     subparser.add_argument(dest="test_file_path", type=str, metavar="FTR", help="Input tabulated feature file for testing.")
-    subparser.add_argument("--vcf", dest="vcf_file_path", type=str, metavar="VCF", help="Optional output VCF file.")
+    # subparser.add_argument("--vcf", dest="vcf_file_path", type=str, metavar="VCF", help="Optional output VCF file.")
     subparser.set_defaults(func=test_command)
 
     description = "Call variants when the truth is unknown."
@@ -136,7 +136,7 @@ def test_command(args):
         Command line arguments stored as attributes of a Namespace, usually
         parsed from sys.argv
     """
-    nn.test(args.model_file_path, args.test_file_path, args.vcf_file_path)
+    nn.test(args.model_file_path, args.test_file_path)  # , args.vcf_file_path)
 
 
 def call_command(args):

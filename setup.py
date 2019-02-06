@@ -28,7 +28,7 @@ test_requirements = [
 setup(
     name='kyos',
     version='0.1.0',
-    description="Tools for haploid variant calling with neural networks.",
+    description="Tools for haploid variant calling with Deep Neural Networks.",
     long_description=readme + '\n\n' + history,
     author="Nathan Xue",
     author_email='xue.nathanv1.0@gmail.com',
