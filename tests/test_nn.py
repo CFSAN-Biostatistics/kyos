@@ -14,10 +14,6 @@ import numpy as np
 from kyos import features
 from kyos import nn
 
-import random
-
-random.seed(1)
-
 
 def test_load_train_data_all_classes(tmpdir):
     """Verify training features and targets are loaded properly when all
@@ -109,8 +105,9 @@ def test_load_test_data_all_classes(tmpdir):
     content = '\t'.join(columns) + '\n'
 
     # Feature data rows, one row for each possible target class
-    for target in nn.output_classes:
-        row = [str(i) for i, col in enumerate(features.feature_names[0:-1])] + random.sample(["A", "C", "T", "G"], 1) + [target]
+    refs = ['A', 'G', 'G', 'C', 'C', 'C', 'T', 'G', 'A']
+    for idx, target in enumerate(nn.output_classes):
+        row = [str(i) for i, col in enumerate(features.feature_names[0:-1])] + [refs[idx]] + [target]
         content += '\t'.join(row)
         content += '\n'
 
