@@ -6,16 +6,18 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
-import keras
-from keras.models import Sequential
-from keras.layers import Dense, Activation, Dropout
-from keras.callbacks import EarlyStopping
 import logging
 import pandas as pd
+import psutil
 import random
 import numpy as np
-import tensorflow as tf
 from timeit import default_timer as timer
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Activation, Dropout
+from tensorflow.keras.callbacks import EarlyStopping
 
 from kyos import features
 from kyos.__init__ import __version__
@@ -266,13 +268,18 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
         tf.set_random_seed(rseed)
 
         # Limit operation to 1 thread for deterministic results.
-        session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
-        sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
-        keras.backend.set_session(sess)
+        cores = 1
     else:
         logging.info("************************************************************************************************")
         logging.info("NOTICE: results are not reproducible when rseed is not set.")
         logging.info("************************************************************************************************")
+
+        # Use all CPUs
+        cores = psutil.cpu_count(logical=True)
+
+    logging.info("Using %d CPUs", cores)
+    tf.config.threading.set_inter_op_parallelism_threads(cores)
+    tf.config.threading.set_intra_op_parallelism_threads(cores)
 
     logging.debug("Kyos train, version %s" % __version__)
     logging.debug("Loading data...")
