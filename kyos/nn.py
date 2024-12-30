@@ -34,7 +34,17 @@ num_input_features = 1 + last_ftr_idx - first_ftr_idx
 # the truth column is appended to feature_names when the truth file is provided
 target_label_name = features.target_label_name
 
-output_classes = ["A", "T", "C", "G", "A_insertion", "T_insertion", "C_insertion", "G_insertion", "_deletion"]
+output_classes = [
+    "A",
+    "T",
+    "C",
+    "G",
+    "A_insertion",
+    "T_insertion",
+    "C_insertion",
+    "G_insertion",
+    "_deletion",
+]
 
 
 def relevant_data(data, first_col, last_col):
@@ -54,7 +64,7 @@ def relevant_data(data, first_col, last_col):
     >>> relevant_data(list(range(0, 30)), 3, 28)
     [3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0]
     """
-    z = [float(val) for val in data[first_col: 1 + last_col]]
+    z = [float(val) for val in data[first_col : 1 + last_col]]
     return z
 
 
@@ -106,7 +116,9 @@ def normalize_features(df):
     # The scaling parameters below are hard-coded to be sure the same values will be used for training, testing,
     # and calling variants.  It might happen that new datasets will have different distribution of values.
     for ftr_name in features.read_count_feature_names:
-        df[ftr_name] = df[ftr_name] / 20.0  # 60th percentile, so some values will scale higher than 1
+        df[ftr_name] = (
+            df[ftr_name] / 20.0
+        )  # 60th percentile, so some values will scale higher than 1
     for ftr_name in features.map_quality_feature_names:
         df[ftr_name] = df[ftr_name] / 100.0
     for ftr_name in features.base_quality_feature_names:
@@ -164,11 +176,13 @@ def load_train_data(path, first_ftr_col, last_ftr_col, scaling="normalize"):
 
     with open(path, "r") as csv_file:
         logging.debug("Reading tsv file...")
-        feature_columns = features.feature_names[first_ftr_col: 1 + last_ftr_col]
+        feature_columns = features.feature_names[first_ftr_col : 1 + last_ftr_col]
         usecols = feature_columns + [target_label_name]
         dtype = {col: np.float32 for col in feature_columns}
         converters = {target_label_name: conv_allele}
-        df = pd.read_csv(csv_file, sep='\t', usecols=usecols, dtype=dtype, converters=converters)
+        df = pd.read_csv(
+            csv_file, sep="\t", usecols=usecols, dtype=dtype, converters=converters
+        )
 
     if scaling == "normalize":
         logging.debug("Normalizing features...")
@@ -185,7 +199,9 @@ def load_train_data(path, first_ftr_col, last_ftr_col, scaling="normalize"):
     one_hot_labels = keras.utils.to_categorical(labels, num_classes=9)
 
     end = timer()
-    logging.debug("%.1f seconds loading %d rows in file %s" % (end - start, len(df), path))
+    logging.debug(
+        "%.1f seconds loading %d rows in file %s" % (end - start, len(df), path)
+    )
     return data, one_hot_labels
 
 
@@ -221,11 +237,13 @@ def load_test_data(path, first_ftr_col, last_ftr_col, scaling="normalize"):
 
     with open(path, "r") as csv_file:
         logging.debug("Reading tsv file...")
-        feature_columns = features.feature_names[first_ftr_col: 1 + last_ftr_col]
+        feature_columns = features.feature_names[first_ftr_col : 1 + last_ftr_col]
         usecols = feature_columns + [target_label_name] + ["RefBase"]
         dtype = {col: np.float32 for col in feature_columns}
         converters = {target_label_name: conv_allele, "RefBase": conv_allele}
-        df = pd.read_csv(csv_file, sep='\t', usecols=usecols, dtype=dtype, converters=converters)
+        df = pd.read_csv(
+            csv_file, sep="\t", usecols=usecols, dtype=dtype, converters=converters
+        )
 
     if scaling == "normalize":
         logging.debug("Normalizing features...")
@@ -240,7 +258,9 @@ def load_test_data(path, first_ftr_col, last_ftr_col, scaling="normalize"):
     refs = df["RefBase"].values
 
     end = timer()
-    logging.debug("%.1f seconds loading %d rows in file %s" % (end - start, len(df), path))
+    logging.debug(
+        "%.1f seconds loading %d rows in file %s" % (end - start, len(df), path)
+    )
     return data, labels, refs
 
 
@@ -259,9 +279,15 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
         Random seed to ensure reproducible results.  Set to zero for non-deterministic results.
     """
     if rseed:
-        logging.info("************************************************************************************************")
-        logging.info("NOTICE: setting the random seed also forces single-threaded execution to ensure reproducibility.")
-        logging.info("************************************************************************************************")
+        logging.info(
+            "************************************************************************************************"
+        )
+        logging.info(
+            "NOTICE: setting the random seed also forces single-threaded execution to ensure reproducibility."
+        )
+        logging.info(
+            "************************************************************************************************"
+        )
         logging.debug("Setting random seed = %d" % rseed)
         random.seed(rseed)
         np.random.seed(rseed)
@@ -270,9 +296,13 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
         # Limit operation to 1 thread for deterministic results.
         cores = 1
     else:
-        logging.info("************************************************************************************************")
+        logging.info(
+            "************************************************************************************************"
+        )
         logging.info("NOTICE: results are not reproducible when rseed is not set.")
-        logging.info("************************************************************************************************")
+        logging.info(
+            "************************************************************************************************"
+        )
 
         # Use all CPUs
         cores = psutil.cpu_count(logical=True)
@@ -284,7 +314,9 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
     logging.debug("Kyos train, version %s" % __version__)
     logging.debug("Loading data...")
     data, one_hot_labels = load_train_data(train_file_path, first_ftr_idx, last_ftr_idx)
-    data_validation, one_hot_label_validation = load_train_data(validate_file_path, first_ftr_idx, last_ftr_idx)
+    data_validation, one_hot_label_validation = load_train_data(
+        validate_file_path, first_ftr_idx, last_ftr_idx
+    )
 
     logging.debug("Defining model...")
     model = Sequential()
@@ -303,20 +335,28 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
     model.add(Dense(30))
     model.add(Activation("relu"))
 
-    model.add(Dense(9, activation='softmax'))
+    model.add(Dense(9, activation="softmax"))
 
     optimizer = keras.optimizers.RMSprop(lr=0.0005)
 
     logging.debug("Compiling model...")
-    model.compile(optimizer=optimizer,
-                  loss='categorical_crossentropy',
-                  metrics=['accuracy'])
+    model.compile(
+        optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"]
+    )
 
     early_stopping_monitor = EarlyStopping(patience=10, restore_best_weights=True)
     callbacks = [early_stopping_monitor]
 
     logging.debug("Fitting model...")
-    model.fit(data, one_hot_labels, validation_data=(data_validation, one_hot_label_validation), batch_size=100000, callbacks=callbacks, epochs=100, verbose=2)
+    model.fit(
+        data,
+        one_hot_labels,
+        validation_data=(data_validation, one_hot_label_validation),
+        batch_size=100000,
+        callbacks=callbacks,
+        epochs=100,
+        verbose=2,
+    )
 
     logging.debug("Saving model...")
     model.save(model_file_path)
@@ -336,7 +376,9 @@ def test(model_file_path, test_file_path, vcf_file_path=None):
         Optional output VCF file.
     """
 
-    data, labels, reference = load_test_data(test_file_path, first_ftr_idx, last_ftr_idx)
+    data, labels, reference = load_test_data(
+        test_file_path, first_ftr_idx, last_ftr_idx
+    )
 
     model = keras.models.load_model(model_file_path)
 
@@ -359,7 +401,16 @@ def test(model_file_path, test_file_path, vcf_file_path=None):
     true_positives = df["TP"].sum()
     true_negatives = df["TN"].sum()
 
-    print("FP:", false_positives, "FN:", false_negatives, "TP:", true_positives, "TN:", true_negatives)
+    print(
+        "FP:",
+        false_positives,
+        "FN:",
+        false_negatives,
+        "TP:",
+        true_positives,
+        "TN:",
+        true_negatives,
+    )
 
 
 def call(model_file_path, ftr_file_path, vcf_file_path):

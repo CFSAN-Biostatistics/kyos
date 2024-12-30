@@ -19,21 +19,80 @@ import random
 import sys
 
 # Tuple to hold metrics per base
-PerBaseTuple = namedtuple("PerBaseTuple", ['A', 'T', 'C', 'G', 'N', 'DEL', 'INS'])
+PerBaseTuple = namedtuple("PerBaseTuple", ["A", "T", "C", "G", "N", "DEL", "INS"])
 
 # Tuple to hold truth dict value
-TruthTuple = namedtuple("TruthTuple", ['ref_base', 'variant'])
+TruthTuple = namedtuple("TruthTuple", ["ref_base", "variant"])
 
 
-feature_names = ["SampleName", "Chrom", "Position", "A", "T", "C", "G", "N", "a", "t", "c", "g", "n", "Insertion", "Deletion", "MapqA", "MapqT", "MapqC", "MapqG", "MapqN", "MapqDel", "MapqIns",
-                 "BaseQualA", "BaseQualT", "BaseQualC", "BaseQualG", "BaseQualN", "BaseQualDel", "BaseQualIns", "RefBase"]
+feature_names = [
+    "SampleName",
+    "Chrom",
+    "Position",
+    "A",
+    "T",
+    "C",
+    "G",
+    "N",
+    "a",
+    "t",
+    "c",
+    "g",
+    "n",
+    "Insertion",
+    "Deletion",
+    "MapqA",
+    "MapqT",
+    "MapqC",
+    "MapqG",
+    "MapqN",
+    "MapqDel",
+    "MapqIns",
+    "BaseQualA",
+    "BaseQualT",
+    "BaseQualC",
+    "BaseQualG",
+    "BaseQualN",
+    "BaseQualDel",
+    "BaseQualIns",
+    "RefBase",
+]
 
 # Expose feature names to the nn module
 first_ftr_name = "A"
 last_ftr_name = "BaseQualIns"
-read_count_feature_names = ["A", "T", "C", "G", "N", "a", "t", "c", "g", "n", "Insertion", "Deletion"]
-map_quality_feature_names = ["MapqA", "MapqT", "MapqC", "MapqG", "MapqN", "MapqDel", "MapqIns"]
-base_quality_feature_names = ["BaseQualA", "BaseQualT", "BaseQualC", "BaseQualG", "BaseQualN", "BaseQualDel", "BaseQualIns"]
+read_count_feature_names = [
+    "A",
+    "T",
+    "C",
+    "G",
+    "N",
+    "a",
+    "t",
+    "c",
+    "g",
+    "n",
+    "Insertion",
+    "Deletion",
+]
+map_quality_feature_names = [
+    "MapqA",
+    "MapqT",
+    "MapqC",
+    "MapqG",
+    "MapqN",
+    "MapqDel",
+    "MapqIns",
+]
+base_quality_feature_names = [
+    "BaseQualA",
+    "BaseQualT",
+    "BaseQualC",
+    "BaseQualG",
+    "BaseQualN",
+    "BaseQualDel",
+    "BaseQualIns",
+]
 target_label_name = "Truth"
 
 
@@ -90,7 +149,9 @@ def read_summary_file(summary_file):
         for line in f:
             replicate, pos, ref_base, truth_variant = line.split()
             key = replicate + " " + pos
-            if truth_variant.endswith("_insertion"):  # Strip off reference base from insertions
+            if truth_variant.endswith(
+                "_insertion"
+            ):  # Strip off reference base from insertions
                 truth_variant = truth_variant[1:]
             truth[key] = TruthTuple(ref_base.upper(), truth_variant)
 
@@ -153,7 +214,7 @@ def convert_to_csv(observations, file_path):
     out_dir = os.path.dirname(file_path)
     mkdir_p(out_dir)
     with open(file_path, "w") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=feature_names, delimiter='\t')
+        writer = csv.DictWriter(csvfile, fieldnames=feature_names, delimiter="\t")
 
         writer.writeheader()
         for row in observations:
@@ -179,7 +240,7 @@ def mean(qualities):
     de_phred = []
 
     for x in qualities:
-        de_phred.append(100-(100*(10**(-1.0*x/10.0))))
+        de_phred.append(100 - (100 * (10 ** (-1.0 * x / 10.0))))
 
     return sum(de_phred) / float(len(de_phred))
 
@@ -226,7 +287,15 @@ def get_average_qualities(pileup_alleles, pileup_qualities):
         else:
             print("Unknown pileup_allele", pileup_alleles[x], file=sys.stderr)
 
-    return PerBaseTuple(mean(qualA), mean(qualT), mean(qualC), mean(qualG), mean(qualN), mean(qualDel), mean(qualIns))
+    return PerBaseTuple(
+        mean(qualA),
+        mean(qualT),
+        mean(qualC),
+        mean(qualG),
+        mean(qualN),
+        mean(qualDel),
+        mean(qualIns),
+    )
 
 
 def read_ref_file(reference_path):
@@ -248,7 +317,15 @@ def read_ref_file(reference_path):
     return ref_seq_dict
 
 
-def create_tabular_data(input_file, output_file, reference_file, truth_file=None, tn_fraction=1.0, force_truth=None, rseed=None):
+def create_tabular_data(
+    input_file,
+    output_file,
+    reference_file,
+    truth_file=None,
+    tn_fraction=1.0,
+    force_truth=None,
+    rseed=None,
+):
     # TODO: This function needs to also examine the summary file or the VCF file.
     #       This is the truth dataset.
     #       Every mutated position needs to be included in the output file, even if
@@ -298,7 +375,9 @@ def create_tabular_data(input_file, output_file, reference_file, truth_file=None
         min_base_quality = 13
         pileupcolumn.set_min_base_quality(min_base_quality)
 
-        pileup_bases = pileupcolumn.get_query_sequences(mark_matches=True, add_indels=True)
+        pileup_bases = pileupcolumn.get_query_sequences(
+            mark_matches=True, add_indels=True
+        )
 
         observation = {}  # dictionary of features keyed by feature_names
 
@@ -325,24 +404,36 @@ def create_tabular_data(input_file, output_file, reference_file, truth_file=None
 
         if len(pileup_bases) == 0:
             # no coverage at this position
-            logging.debug("%d No coverage at base quality %d" % (pileupcolumn.pos + 1, min_base_quality))
+            logging.debug(
+                "%d No coverage at base quality %d"
+                % (pileupcolumn.pos + 1, min_base_quality)
+            )
             if force_truth and mutated_position_flag:
                 observations.append(observation)
                 all_positions.add(sample_name + " " + str(pileupcolumn.pos + 1))
-                logging.debug("Added no-coverage known true mutation for %s at %d" % (sample_name, pileupcolumn.pos + 1))
+                logging.debug(
+                    "Added no-coverage known true mutation for %s at %d"
+                    % (sample_name, pileupcolumn.pos + 1)
+                )
             continue
 
         base_counts = Counter(pileup_bases)
 
-        is_any_variant_evidence = any_variant_evidence(base_counts, ref_seq_dict, contig, pileupcolumn.pos)
+        is_any_variant_evidence = any_variant_evidence(
+            base_counts, ref_seq_dict, contig, pileupcolumn.pos
+        )
 
         in_summary = force_truth and mutated_position_flag
 
-        '''if in_summary:
-            print(in_summary, pileupcolumn.pos, key)'''
+        """if in_summary:
+            print(in_summary, pileupcolumn.pos, key)"""
 
         if is_any_variant_evidence or in_summary:
-            if tn_fraction < 1.0 and not mutated_position_flag and random.random() > tn_fraction:
+            if (
+                tn_fraction < 1.0
+                and not mutated_position_flag
+                and random.random() > tn_fraction
+            ):
                 continue
 
             for key in base_counts:
@@ -362,7 +453,13 @@ def create_tabular_data(input_file, output_file, reference_file, truth_file=None
                         observation["Deletion"] += 1
 
                     else:
-                        print(1 + pileupcolumn.pos, "Unexpected base:", key, pileup_bases, file=sys.stderr)
+                        print(
+                            1 + pileupcolumn.pos,
+                            "Unexpected base:",
+                            key,
+                            pileup_bases,
+                            file=sys.stderr,
+                        )
 
             mapping_qualities = pileupcolumn.get_mapping_qualities()
             base_qualities = pileupcolumn.get_query_qualities()
@@ -414,9 +511,14 @@ def create_tabular_data(input_file, output_file, reference_file, truth_file=None
                 observation["Truth"] = value.variant
 
                 observations.append(observation)
-                logging.debug("Added missing known true mutation for %s at %d" % (sample_name, position))
+                logging.debug(
+                    "Added missing known true mutation for %s at %d"
+                    % (sample_name, position)
+                )
         except Exception:
-            logging.exception("Exception with truth dict.  key: %s value: %s", repr(key), repr(value))
+            logging.exception(
+                "Exception with truth dict.  key: %s value: %s", repr(key), repr(value)
+            )
 
     samfile.close()
 

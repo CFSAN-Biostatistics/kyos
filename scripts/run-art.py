@@ -24,14 +24,19 @@ def draw_random_normal(mu, std, minimum, maximum):
             return draw
 
 
-def run_art_bash(in_directory, out_directory, filename, seed, coverage, log_file_path=None):
+def run_art_bash(
+    in_directory, out_directory, filename, seed, coverage, log_file_path=None
+):
     inputFile = os.path.join(in_directory, filename + ".fasta")
     outputDir = os.path.join(out_directory, filename)
     subprocess.call("mkdir -p " + outputDir, shell=True)
     outputFile = os.path.join(outputDir, filename + "_")
-    run_string = "art_illumina --noALN -i %s -p -l 250 -ss MSv1 -f %.1f -m 500 -s 85 -rs %d -o %s" % (inputFile, coverage, seed, outputFile)
+    run_string = (
+        "art_illumina --noALN -i %s -p -l 250 -ss MSv1 -f %.1f -m 500 -s 85 -rs %d -o %s"
+        % (inputFile, coverage, seed, outputFile)
+    )
     if log_file_path:
-        with open(log_file_path, 'a') as f:
+        with open(log_file_path, "a") as f:
             print(run_string, file=f)
     subprocess.call(run_string, shell=True)
 
@@ -56,7 +61,14 @@ def main():
             if filename.startswith("unmutated"):
                 continue
             coverage = draw_random_normal(mu, std, minimum, maximum)
-            run_art_bash(in_directory, out_directory, filename.replace(".fasta", ""), rseed, coverage, log_file_path)
+            run_art_bash(
+                in_directory,
+                out_directory,
+                filename.replace(".fasta", ""),
+                rseed,
+                coverage,
+                log_file_path,
+            )
             rseed += 1
 
 
