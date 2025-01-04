@@ -16,8 +16,9 @@ from timeit import default_timer as timer
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Activation, Dropout
+from tensorflow.keras.layers import Dense, Activation, Dropout, BatchNormalization
 from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.optimizers import Adam, RMSprop, SGD
 
 from kyos import features
 from kyos.__init__ import __version__
@@ -264,19 +265,26 @@ def load_test_data(path, first_ftr_col, last_ftr_col, scaling="normalize"):
     return data, labels, refs
 
 
-def train(train_file_path, validate_file_path, model_file_path, rseed=None):
+def train(train_file_path, validate_file_path, model_file_path, rseed=None, neurons=[40, 30, 30, 30],
+          optimizer='RMSprop', learning_rate=0.0005):
     """Train a neural network to detect variants.
 
     Parameters
     ----------
     train_file_path : str
-        Input tabulated feature file for training.
+      Input tabulated feature file for training.
     validate_file_path : str
-        Input tabulated feature file for validation during training.
+      Input tabulated feature file for validation during training.
     model_file_path : str
-        Output trained model.
-    rseed : int
-        Random seed to ensure reproducible results.  Set to zero for non-deterministic results.
+      Output trained model.
+    rseed : int, optional
+      Random seed to ensure reproducible results. Set to zero for non-deterministic results.
+    neurons : list, optional
+      List of hidden layer neuron counts for the neural network architecture. Defaults to [40, 30, 30, 30].
+    optimizer : str, optional
+        Name of the optimizer to use (e.g., 'Adam', 'RMSprop', 'SGD'). Defaults to 'RMSprop'.
+    learning_rate : float, optional
+        Learning rate for the optimizer. Defaults to 0.0005.
     """
     if rseed:
         logging.info(
@@ -320,28 +328,32 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
 
     logging.debug("Defining model...")
     model = Sequential()
-    model.add(Dense(40, input_dim=num_input_features))
+    model.add(Dense(neurons[0], input_dim=num_input_features))
     model.add(Activation("relu"))
-    model.add(Dropout(0.2))
+    model.add(BatchNormalization())  # Add BatchNormalization after Dense layer
+    model.add(Dropout(0.2))  # Add Dropout after BatchNormalization
 
-    model.add(Dense(30))
-    model.add(Activation("relu"))
-    model.add(Dropout(0.2))
-
-    model.add(Dense(30))
-    model.add(Activation("relu"))
-    model.add(Dropout(0.2))
-
-    model.add(Dense(30))
-    model.add(Activation("relu"))
+    for num_neurons in neurons[1:]:
+        model.add(Dense(num_neurons))
+        model.add(Activation("relu"))
+        model.add(BatchNormalization())  # Add BatchNormalization after each Dense layer
+        model.add(Dropout(0.2))  # Add Dropout after each BatchNormalization
 
     model.add(Dense(9, activation="softmax"))
 
-    optimizer = keras.optimizers.RMSprop(lr=0.0005)
+    logging.debug("Selecting Optimizer...")
+    if optimizer.lower() == 'adam':
+        optimizer_instance = Adam(learning_rate=learning_rate)
+    elif optimizer.lower() == 'rmsprop':
+        optimizer_instance = RMSprop(learning_rate=learning_rate)
+    elif optimizer.lower() == 'sgd':
+        optimizer_instance = SGD(learning_rate=learning_rate)
+    else:
+        raise ValueError(f"Invalid optimizer: {optimizer}. Choose 'Adam', 'RMSprop', or 'SGD'.")
 
     logging.debug("Compiling model...")
     model.compile(
-        optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"]
+        optimizer=optimizer_instance, loss="categorical_crossentropy", metrics=["accuracy"]
     )
 
     early_stopping_monitor = EarlyStopping(patience=10, restore_best_weights=True)
