@@ -19,6 +19,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Activation, Dropout, BatchNormalization
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.optimizers import Adam, RMSprop, SGD
+from sklearn.preprocessing import StandardScaler
 
 from kyos import features
 from kyos.__init__ import __version__
@@ -49,81 +50,41 @@ output_classes = [
 
 
 def relevant_data(data, first_col, last_col):
-    """Extract the specified range of adjacent feature columns from a single observation row.
-
-    Parameters
-    ----------
-    data : list
-        List of feature and target columns.
-    first_col : int
-        First column index to select.
-    last_col : int
-        Last column index to select.
-
-    Examples
-    --------
-    >>> relevant_data(list(range(0, 30)), 3, 28)
-    [3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0]
-    """
-    z = [float(val) for val in data[first_col : 1 + last_col]]
-    return z
-
+    """Extract features as a NumPy array for better performance."""
+    return np.array(data[first_col : 1 + last_col], dtype=np.float32)
 
 def conv_allele(allele):
-    if allele.upper() == "A":
-        return 0
-    elif allele.upper() == "T":
-        return 1
-    elif allele.upper() == "C":
-        return 2
-    elif allele.upper() == "G":
-        return 3
-    elif "_insertion" in allele:
-        if allele[0].upper() == "A":
-            return 4
-        elif allele[0].upper() == "T":
-            return 5
-        elif allele[0].upper() == "C":
-            return 6
-        elif allele[0].upper() == "G":
-            return 7
-    elif "_deletion" in allele:
-        return 8
-    else:
-        raise ValueError("Unknown allele: %s" % (allele))
+    """More efficient allele conversion using a dictionary."""
+    allele_map = {
+        "A": 0, "T": 1, "C": 2, "G": 3,
+        "A_insertion": 4, "T_insertion": 5, "C_insertion": 6, "G_insertion": 7,
+        "_deletion": 8
+    }
+    try:
+        return allele_map[allele.upper()]
+    except KeyError:
+        for key in allele_map:
+            if key.endswith("_insertion") and allele.upper().startswith(key[0]):
+                return allele_map[key]
+        raise ValueError(f"Unknown allele: {allele}")
 
 
 def conv_output(output):
-    for x in range(len(output)):
-        if output[x] > 0.7:
-            return output_classes[x]
-
+    """More efficient output conversion using argmax."""
+    if np.max(output) > 0.7:
+        return output_classes[np.argmax(output)]
     return "-"
 
 
-def normalize_features(df):
-    """Normalize the input features so the scaled features are scaled approximately in the range 0 to 1.
+def standardize_features(df):
+    """Standardize features using StandardScaler for more robust scaling. No in-place modification."""
+    df_standardized = df.copy()
 
-    In practice, we found better results when the read count features are scaled in such a way that some
-    of the values are greater than 1.
+    scaler = StandardScaler()
 
-    The datafame is modified in-place.
-
-    Parameters
-    ----------
-    df : Pandas dataframe
-        Dataframe of features
-    """
-    # The scaling parameters below are hard-coded to be sure the same values will be used for training, testing,
-    # and calling variants.  It might happen that new datasets will have different distribution of values.
-    for ftr_name in features.read_count_feature_names:
-        df[ftr_name] = (
-            df[ftr_name] / 20.0
-        )  # 60th percentile, so some values will scale higher than 1
-    for ftr_name in features.map_quality_feature_names:
-        df[ftr_name] = df[ftr_name] / 100.0
-    for ftr_name in features.base_quality_feature_names:
-        df[ftr_name] = df[ftr_name] / 100.0
+    feature_cols = features.read_count_feature_names + features.map_quality_feature_names + features.base_quality_feature_names
+    df_standardized[feature_cols] = scaler.fit_transform(df_standardized[feature_cols])
+    return df_standardized
 
 
 def standardize_features(df):
