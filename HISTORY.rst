@@ -7,6 +7,7 @@ History
 ---------------------
 * Preprocessing optimizations.
 * Added LSTM model.
+* Added unit tests.
 
 0.2.0 (2020-05-13)
 ---------------------
