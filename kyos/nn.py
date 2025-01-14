@@ -16,8 +16,10 @@ from timeit import default_timer as timer
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Activation, Dropout
+from tensorflow.keras.layers import Dense, Activation, Dropout, BatchNormalization
 from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.optimizers import Adam, RMSprop, SGD
+from sklearn.preprocessing import StandardScaler
 
 from kyos import features
 from kyos.__init__ import __version__
@@ -48,81 +50,41 @@ output_classes = [
 
 
 def relevant_data(data, first_col, last_col):
-    """Extract the specified range of adjacent feature columns from a single observation row.
-
-    Parameters
-    ----------
-    data : list
-        List of feature and target columns.
-    first_col : int
-        First column index to select.
-    last_col : int
-        Last column index to select.
-
-    Examples
-    --------
-    >>> relevant_data(list(range(0, 30)), 3, 28)
-    [3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0]
-    """
-    z = [float(val) for val in data[first_col : 1 + last_col]]
-    return z
-
+    """Extract features as a NumPy array for better performance."""
+    return np.array(data[first_col : 1 + last_col], dtype=np.float32)
 
 def conv_allele(allele):
-    if allele.upper() == "A":
-        return 0
-    elif allele.upper() == "T":
-        return 1
-    elif allele.upper() == "C":
-        return 2
-    elif allele.upper() == "G":
-        return 3
-    elif "_insertion" in allele:
-        if allele[0].upper() == "A":
-            return 4
-        elif allele[0].upper() == "T":
-            return 5
-        elif allele[0].upper() == "C":
-            return 6
-        elif allele[0].upper() == "G":
-            return 7
-    elif "_deletion" in allele:
-        return 8
-    else:
-        raise ValueError("Unknown allele: %s" % (allele))
+    """More efficient allele conversion using a dictionary."""
+    allele_map = {
+        "A": 0, "T": 1, "C": 2, "G": 3,
+        "A_insertion": 4, "T_insertion": 5, "C_insertion": 6, "G_insertion": 7,
+        "_deletion": 8
+    }
+    try:
+        return allele_map[allele.upper()]
+    except KeyError:
+        for key in allele_map:
+            if key.endswith("_insertion") and allele.upper().startswith(key[0]):
+                return allele_map[key]
+        raise ValueError(f"Unknown allele: {allele}")
 
 
 def conv_output(output):
-    for x in range(len(output)):
-        if output[x] > 0.7:
-            return output_classes[x]
-
+    """More efficient output conversion using argmax."""
+    if np.max(output) > 0.7:
+        return output_classes[np.argmax(output)]
     return "-"
 
 
-def normalize_features(df):
-    """Normalize the input features so the scaled features are scaled approximately in the range 0 to 1.
+def standardize_features(df):
+    """Standardize features using StandardScaler for more robust scaling. No in-place modification."""
+    df_standardized = df.copy()
 
-    In practice, we found better results when the read count features are scaled in such a way that some
-    of the values are greater than 1.
+    scaler = StandardScaler()
 
-    The datafame is modified in-place.
-
-    Parameters
-    ----------
-    df : Pandas dataframe
-        Dataframe of features
-    """
-    # The scaling parameters below are hard-coded to be sure the same values will be used for training, testing,
-    # and calling variants.  It might happen that new datasets will have different distribution of values.
-    for ftr_name in features.read_count_feature_names:
-        df[ftr_name] = (
-            df[ftr_name] / 20.0
-        )  # 60th percentile, so some values will scale higher than 1
-    for ftr_name in features.map_quality_feature_names:
-        df[ftr_name] = df[ftr_name] / 100.0
-    for ftr_name in features.base_quality_feature_names:
-        df[ftr_name] = df[ftr_name] / 100.0
+    feature_cols = features.read_count_feature_names + features.map_quality_feature_names + features.base_quality_feature_names
+    df_standardized[feature_cols] = scaler.fit_transform(df_standardized[feature_cols])
+    return df_standardized
 
 
 def standardize_features(df):
@@ -264,19 +226,26 @@ def load_test_data(path, first_ftr_col, last_ftr_col, scaling="normalize"):
     return data, labels, refs
 
 
-def train(train_file_path, validate_file_path, model_file_path, rseed=None):
+def train(train_file_path, validate_file_path, model_file_path, rseed=None, neurons=[40, 30, 30, 30],
+          optimizer='RMSprop', learning_rate=0.0005):
     """Train a neural network to detect variants.
 
     Parameters
     ----------
     train_file_path : str
-        Input tabulated feature file for training.
+      Input tabulated feature file for training.
     validate_file_path : str
-        Input tabulated feature file for validation during training.
+      Input tabulated feature file for validation during training.
     model_file_path : str
-        Output trained model.
-    rseed : int
-        Random seed to ensure reproducible results.  Set to zero for non-deterministic results.
+      Output trained model.
+    rseed : int, optional
+      Random seed to ensure reproducible results. Set to zero for non-deterministic results.
+    neurons : list, optional
+      List of hidden layer neuron counts for the neural network architecture. Defaults to [40, 30, 30, 30].
+    optimizer : str, optional
+        Name of the optimizer to use (e.g., 'Adam', 'RMSprop', 'SGD'). Defaults to 'RMSprop'.
+    learning_rate : float, optional
+        Learning rate for the optimizer. Defaults to 0.0005.
     """
     if rseed:
         logging.info(
@@ -320,28 +289,32 @@ def train(train_file_path, validate_file_path, model_file_path, rseed=None):
 
     logging.debug("Defining model...")
     model = Sequential()
-    model.add(Dense(40, input_dim=num_input_features))
+    model.add(Dense(neurons[0], input_dim=num_input_features))
     model.add(Activation("relu"))
-    model.add(Dropout(0.2))
+    model.add(BatchNormalization())  # Add BatchNormalization after Dense layer
+    model.add(Dropout(0.2))  # Add Dropout after BatchNormalization
 
-    model.add(Dense(30))
-    model.add(Activation("relu"))
-    model.add(Dropout(0.2))
-
-    model.add(Dense(30))
-    model.add(Activation("relu"))
-    model.add(Dropout(0.2))
-
-    model.add(Dense(30))
-    model.add(Activation("relu"))
+    for num_neurons in neurons[1:]:
+        model.add(Dense(num_neurons))
+        model.add(Activation("relu"))
+        model.add(BatchNormalization())  # Add BatchNormalization after each Dense layer
+        model.add(Dropout(0.2))  # Add Dropout after each BatchNormalization
 
     model.add(Dense(9, activation="softmax"))
 
-    optimizer = keras.optimizers.RMSprop(lr=0.0005)
+    logging.debug("Selecting Optimizer...")
+    if optimizer.lower() == 'adam':
+        optimizer_instance = Adam(learning_rate=learning_rate)
+    elif optimizer.lower() == 'rmsprop':
+        optimizer_instance = RMSprop(learning_rate=learning_rate)
+    elif optimizer.lower() == 'sgd':
+        optimizer_instance = SGD(learning_rate=learning_rate)
+    else:
+        raise ValueError(f"Invalid optimizer: {optimizer}. Choose 'Adam', 'RMSprop', or 'SGD'.")
 
     logging.debug("Compiling model...")
     model.compile(
-        optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"]
+        optimizer=optimizer_instance, loss="categorical_crossentropy", metrics=["accuracy"]
     )
 
     early_stopping_monitor = EarlyStopping(patience=10, restore_best_weights=True)
