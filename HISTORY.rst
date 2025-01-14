@@ -3,6 +3,11 @@
 History
 =======
 
+0.3.0 (2024-12-15)
+---------------------
+* Preprocessing optimizations.
+* Added LSTM model.
+
 0.2.0 (2020-05-13)
 ---------------------
 * Changes for Tensorflow 2.
