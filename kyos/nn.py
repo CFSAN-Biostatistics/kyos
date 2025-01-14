@@ -53,6 +53,7 @@ def relevant_data(data, first_col, last_col):
     """Extract features as a NumPy array for better performance."""
     return np.array(data[first_col : 1 + last_col], dtype=np.float32)
 
+
 def conv_allele(allele):
     """More efficient allele conversion using a dictionary."""
     allele_map = {
@@ -87,7 +88,7 @@ def standardize_features(df):
     return df_standardized
 
 
-def standardize_features(df):
+def normalize_features(df):
     """Standardize the input features so the scaled features are approximately centered around 0 with variance 1.
 
     The datafame is modified in-place.
